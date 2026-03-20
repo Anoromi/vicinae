@@ -13,5 +13,7 @@ class BrowserExtension : public BuiltinCommandRepository {
   }
 
 public:
+  std::vector<Preference> preferences() const override;
+  void preferenceValuesChanged(const QJsonObject &value) const override;
   BrowserExtension();
 };

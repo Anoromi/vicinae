@@ -83,12 +83,15 @@ public:
   virtual PreferenceList preferences() const { return {}; }
 
   virtual double baseScoreWeight() const { return 1; }
+  virtual double searchScoreWeight() const { return 1; }
 
   /**
    * An optional subtitle shown to the left of the `displayName`.
    * Indexed the same as the `displayName`.
    */
   virtual QString subtitle() const { return {}; }
+  virtual QString searchableTitle() const { return displayName(); }
+  virtual QString searchableSubtitle() const { return subtitle(); }
 
   /**
    * A list of accessories that are shown to the right of

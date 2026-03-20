@@ -843,11 +843,13 @@ if (BUILD_TESTS)
 	set(TEST_TARGET ${TARGET}-tests)
 	find_package(Catch2 3 REQUIRED)
 	add_executable(${TEST_TARGET}
+		src/services/browser-extension-service.hpp
+		tests/browser-tab-ranking-tests.cpp
 		tests/shortcut-tests.cpp
 		src/extend/action-shortcut-parser.cpp
 		src/lib/keyboard/keyboard.cpp
 		src/lib/keyboard/keybind-manager.cpp
 	)
-	target_link_libraries(${TEST_TARGET} PRIVATE Catch2::Catch2WithMain Qt6::Core Qt6::Gui)
+	target_link_libraries(${TEST_TARGET} PRIVATE Catch2::Catch2WithMain Qt6::Core Qt6::Gui Qt6::Network Qt6::Sql vicinae::ipc)
 	target_compile_features(${TEST_TARGET} PUBLIC cxx_std_23)
 endif()

@@ -13,14 +13,15 @@ QVariantMap BrowserTabsViewHost::qmlProperties() {
 void BrowserTabsViewHost::initialize() {
   BaseView::initialize();
 
-  m_model = new BrowserTabsModel(this);
+  auto *browser = context()->services->browserExtension();
+  m_model = new BrowserTabsModel(*browser, this);
   m_model->setScope(ViewScope(context(), this));
   m_model->initialize();
 
   setSearchPlaceholderText("Search, focus and close tabs");
 
-  auto browser = context()->services->browserExtension();
   connect(browser, &BrowserExtensionService::tabsChanged, this, &BrowserTabsViewHost::reload);
+  connect(browser, &BrowserExtensionService::rankingModeChanged, this, &BrowserTabsViewHost::reload);
 }
 
 void BrowserTabsViewHost::loadInitialData() { reload(); }

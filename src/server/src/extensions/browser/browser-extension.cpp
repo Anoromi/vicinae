@@ -6,6 +6,7 @@
 #include "qml/empty-view-host.hpp"
 #include "qml/shortcut-form-view-host.hpp"
 #include "navigation-controller.hpp"
+#include "service-registry.hpp"
 #include "services/toast/toast-service.hpp"
 #include "services/browser-extension-service.hpp"
 #include "single-view-command-context.hpp"
@@ -82,4 +83,18 @@ class SearchBrowserTabsCommand : public GuardedBuiltinCallbackCommand {
 BrowserExtension::BrowserExtension() {
   registerCommand<SearchBrowserTabsCommand>();
   registerCommand<CreateShortcutFromActiveBrowserTabCommand>();
+}
+
+std::vector<Preference> BrowserExtension::preferences() const {
+  auto prioritizeUrlMatches = Preference::makeCheckbox("prioritizeUrlMatches");
+  prioritizeUrlMatches.setTitle("Prioritize URL matches");
+  prioritizeUrlMatches.setDescription(
+      "Rank browser tabs primarily by hostname and URL instead of page title.");
+  prioritizeUrlMatches.setDefaultValue(false);
+  return {prioritizeUrlMatches};
+}
+
+void BrowserExtension::preferenceValuesChanged(const QJsonObject &value) const {
+  ServiceRegistry::instance()->browserExtension()->setPrioritizeUrlMatches(
+      value.value("prioritizeUrlMatches").toBool());
 }

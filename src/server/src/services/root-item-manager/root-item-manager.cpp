@@ -108,8 +108,8 @@ void RootItemManager::updateIndex() {
       auto id = item->uniqueId();
 
       sitem.item = item;
-      sitem.title = item->displayName().toStdString();
-      sitem.subtitle = item->subtitle().toStdString();
+      sitem.title = item->searchableTitle().toStdString();
+      sitem.subtitle = item->searchableSubtitle().toStdString();
       sitem.keywords = item->keywords() | std::views::transform([](auto &&s) { return s.toStdString(); }) |
                        std::ranges::to<std::vector>();
 
@@ -163,7 +163,7 @@ void RootItemManager::search(const QString &query, std::vector<ScoredItem> &resu
     if (!item.meta->enabled && !opts.includeDisabled) continue;
     if (opts.providerId && opts.providerId != item.meta->providerId) continue;
     if (item.meta->favorite && !opts.includeFavorites) continue;
-    double const fuzzyScore = item.fuzzyScore(patternView);
+    double const fuzzyScore = item.fuzzyScore(patternView) * item.item->searchScoreWeight();
 
     if (!fuzzyScore) { continue; }
 

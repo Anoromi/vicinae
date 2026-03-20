@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <glaze/core/reflect.hpp>
 #include <ranges>
+#include "lib/fuzzy/fuzzy-searchable.hpp"
 #include "ui/image/url.hpp"
 #include "vicinae-ipc/ipc.hpp"
 
@@ -17,12 +18,41 @@ signals:
   void tabActionRequested(std::string browserId, int id, TabAction action) const;
   void tabsChanged() const;
   void browsersChanged() const;
+  void rankingModeChanged() const;
 
 public:
   struct BrowserTab : ipc::BrowserTabInfo {
     std::string browserId;
 
     std::string uniqueId() const { return std::format("{}-{}", browserId, id); }
+    std::string hostKey() const {
+      QUrl const qurl(url.c_str());
+      if (!qurl.isValid() || !std::ranges::contains(std::initializer_list{"https", "http"}, qurl.scheme())) {
+        return {};
+      }
+
+      auto host = qurl.host().toLower();
+      if (host.startsWith("www.")) { host.remove(0, 4); }
+      return host.toStdString();
+    }
+    int fuzzyScore(std::string_view query, bool prioritizeUrlMatches) const {
+      return prioritizeUrlMatches ? fuzzy::scoreWeighted({{hostKey(), 1.0}, {url, 0.7}, {title, 0.3}}, query)
+                                  : fuzzy::scoreWeighted({{title, 1.0}, {url, 0.7}}, query);
+    }
+    QString searchableTitle(bool prioritizeUrlMatches) const {
+      if (auto host = hostKey(); prioritizeUrlMatches && !host.empty()) {
+        return QString::fromStdString(host);
+      }
+      return QString::fromStdString(title);
+    }
+    QString searchableSubtitle(bool prioritizeUrlMatches) const {
+      return prioritizeUrlMatches ? QString::fromStdString(url) : QString();
+    }
+    std::vector<QString> keywords(bool prioritizeUrlMatches) const {
+      if (!prioritizeUrlMatches) { return {QString::fromStdString(url)}; }
+      return {QString::fromStdString(title), QString::fromStdString(url)};
+    }
+    double searchScoreWeight(bool prioritizeUrlMatches) const { return prioritizeUrlMatches ? 1.15 : 1.0; }
 
     ImageURL icon() const {
       if (QUrl qurl = QUrl(url.c_str());
@@ -41,6 +71,14 @@ public:
   };
 
   BrowserExtensionService() = default;
+
+  bool prioritizeUrlMatches() const { return m_prioritizeUrlMatches; }
+
+  void setPrioritizeUrlMatches(bool value) {
+    if (m_prioritizeUrlMatches == value) return;
+    m_prioritizeUrlMatches = value;
+    emit rankingModeChanged();
+  }
 
   std::vector<BrowserTab> tabs() const {
     return m_browsers | std::views::transform([](auto &&b) { return b.tabs; }) | std::views::join |
@@ -126,4 +164,5 @@ public:
 
 private:
   std::vector<BrowserInfo> m_browsers;
+  bool m_prioritizeUrlMatches = false;
 };

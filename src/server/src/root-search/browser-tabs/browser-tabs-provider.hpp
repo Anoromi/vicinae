@@ -12,12 +12,21 @@
 
 class BrowserTabRootItem : public RootItem {
   double baseScoreWeight() const override { return 1.1; }
+  double searchScoreWeight() const override {
+    return m_tab.searchScoreWeight(m_service.prioritizeUrlMatches());
+  }
 
   QString typeDisplayName() const override { return "Browser Tab"; }
 
   QString displayName() const override { return m_tab.title.c_str(); }
 
   QString subtitle() const override { return ""; }
+
+  QString searchableTitle() const override { return m_tab.searchableTitle(m_service.prioritizeUrlMatches()); }
+
+  QString searchableSubtitle() const override {
+    return m_tab.searchableSubtitle(m_service.prioritizeUrlMatches());
+  }
 
   std::unique_ptr<ActionPanelState> newActionPanel(ApplicationContext *ctx,
                                                    const RootItemMetadata &metadata) const override {
@@ -36,14 +45,16 @@ class BrowserTabRootItem : public RootItem {
 
   ImageURL iconUrl() const override { return m_tab.icon(); }
 
-  std::vector<QString> keywords() const override { return {m_tab.url.c_str()}; }
+  std::vector<QString> keywords() const override { return m_tab.keywords(m_service.prioritizeUrlMatches()); }
 
   bool isActive() const override { return m_tab.active; }
 
 public:
-  BrowserTabRootItem(const BrowserExtensionService::BrowserTab &tab) : m_tab(tab) {}
+  BrowserTabRootItem(const BrowserExtensionService::BrowserTab &tab, BrowserExtensionService &service)
+      : m_service(service), m_tab(tab) {}
 
 private:
+  BrowserExtensionService &m_service;
   BrowserExtensionService::BrowserTab m_tab;
 };
 
@@ -52,8 +63,8 @@ public:
   std::vector<std::shared_ptr<RootItem>> loadItems() const override {
     auto items = m_service.tabs() |
                  std::views::transform(
-                     [](const BrowserExtensionService::BrowserTab &tab) -> std::shared_ptr<RootItem> {
-                       return std::make_shared<BrowserTabRootItem>(tab);
+                     [this](const BrowserExtensionService::BrowserTab &tab) -> std::shared_ptr<RootItem> {
+                       return std::make_shared<BrowserTabRootItem>(tab, m_service);
                      });
 
     return items | std::ranges::to<std::vector>();
@@ -76,6 +87,8 @@ public:
 public:
   BrowserTabProvider(BrowserExtensionService &service) : m_service(service) {
     connect(&m_service, &BrowserExtensionService::tabsChanged, this, [this]() { emit itemsChanged(); });
+    connect(&m_service, &BrowserExtensionService::rankingModeChanged, this,
+            [this]() { emit itemsChanged(); });
   }
 
 private:
